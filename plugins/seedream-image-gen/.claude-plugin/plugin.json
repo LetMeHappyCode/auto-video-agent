@@ -1,0 +1,10 @@
+{
+  "name": "seedream-image-gen",
+  "version": "1.0.0",
+  "description": "接入火山方舟 Seedream 文生图/图生图 API，支持单图、组图生成，并记录每次调用的请求/响应日志",
+  "author": {
+    "name": "Y"
+  },
+  "license": "MIT",
+  "keywords": ["image-generation", "volcengine", "ark", "seedream", "text-to-image", "image-to-image"]
+}

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "seedream-image-gen": {
+      "command": "python",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/mcp_server.py"]
+    }
+  }
+}

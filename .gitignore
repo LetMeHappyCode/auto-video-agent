@@ -1,0 +1,10 @@
+plugins/*/.env
+plugins/*/logs/
+__pycache__/
+*.pyc
+
+# Local config
+.claude/settings.local.json
+.claude/settings.json
+.codex/
+.agents/

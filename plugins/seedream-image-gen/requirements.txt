@@ -1,0 +1,3 @@
+volcengine-python-sdk[ark]
+mcp
+python-dotenv
