@@ -31,25 +31,21 @@ https://github.com/user-attachments/assets/88b1fbad-e34c-461d-b6bd-26dd3a6c8073
 4. **拼接成片**：按分镜时间轴把所有插画拼接成一段无声视频
 5. **可视化管理**：提供一个本地 Web 管理界面，浏览分镜库、预览/生成图片、编辑分镜数据
 
-整条链路由 Agent（`.claude/agents/`）+ Skill（`.claude/skills/`）+ Workflow（`.claude/workflows/`）编排完成，AI 生成的正文内容全部由子智能体自己落盘，主会话只传递状态和路径，避免上下文被大量正文占满。
+整条链路（含生图、拼接成片）都可以由 AI 自主调度完成：只需在 Claude Code 里给出 SRT 路径和画风要求，Claude 会自主派发 Agent（`.claude/agents/`）+ 运行 Workflow（`.claude/workflows/`）完成分镜切分与提示词生成，再自主通过 Bash 调用 `scripts/generate_images.py`、`scripts/compose_video.py` 完成生图和拼接，不需要人工逐步执行脚本。手动执行脚本仅作为备选方式（用于单独重跑某一步或不想经由 AI 调度的场景）。AI 生成的正文内容全部由子智能体自己落盘，主会话只传递状态和路径，避免上下文被大量正文占满。
 
 ## 工作流程
 
 ```mermaid
-flowchart TD
-    A[SRT 字幕文件] --> B["srt-shot-segmenter agent<br/>一次性分镜切分"]
-    B --> C[shots.json<br/>镜头时间轴 + 台词]
-    C --> D["generate-illustration-prompts workflow<br/>逐镜头并发生成提示词"]
-    D --> E["prompt-generator agent<br/>五步法生成 + 十项自检"]
-    E --> F["prompt-result-verifier agent<br/>批量校验结果文件"]
-    F --> G[shot-NNNN.prompt.json]
-    G --> H["generate_images.py<br/>调用 Seedream 文生图/图生图"]
-    H --> I[shot-NNNN.png 分镜插画]
-    I --> J["compose_video.py<br/>按时间轴拼接"]
-    J --> K[output.mp4 成片]
+flowchart LR
+    A[SRT 字幕文件] --> B["srt-shot-segmenter<br/>分镜切分"] --> C[shots.json]
+    C --> D["generate-illustration-prompts<br/>workflow 并发生成提示词"] --> G[shot-NNNN.prompt.json]
+    G --> H["AI 自主调用<br/>generate_images.py"] --> I[shot-NNNN.png]
+    I --> J["AI 自主调用<br/>compose_video.py"] --> K[output.mp4 成片]
     C -.编辑/预览.-> L[分镜管理系统 Web UI]
     I -.浏览/生成.-> L
 ```
+
+> 图中从切分到成片的每一步，正常情况下都由 AI 在对话中自主完成，无需手动运行脚本；手动执行脚本仅作为备选方式。
 
 ## 目录结构
 
@@ -90,19 +86,30 @@ ARK_API_KEY=你的火山方舟 API Key
 
 > API Key 获取地址：https://console.volcengine.com/ark/region:cn-beijing/apikey
 
-### 2. 分镜切分 + 生成插画提示词
+### 2. 让 AI 自主完成分镜切分 → 提示词生成 → 生图 → 拼接成片
 
-在 Claude Code 中派发 agent 完成分镜切分，再运行 workflow 批量生成插画提示词，详见 [使用指南.md](使用指南.md)。
+正常用法是在 Claude Code 对话里直接说明需求，例如：
 
-### 3. 生成分镜图片
+```
+我想把 SRT 文件转换成视频。
+SRT 路径：文案分镜库/你的项目目录/文案.srt
+画风：扁平、手绘卡通插图
+主角：标志性的白头卡通人物
+```
+
+Claude 会自主完成整条链路：派发 `srt-shot-segmenter` agent 切分出 `shots.json`，运行 `generate-illustration-prompts` workflow 并发生成插画提示词（`prompt-generator` 生成 + `prompt-result-verifier` 批量校验），再通过 Bash 自主调用 `scripts/generate_images.py` 批量生图、`scripts/compose_video.py` 拼接成片，全程不需要人工逐步执行脚本。具体的 agent/workflow 调度细节见 [使用指南.md](使用指南.md)。
+
+### 3. 手动执行脚本（备选）
+
+如果不想经由 AI 调度，或者需要单独重跑某一步，也可以手动执行对应脚本：
+
+分镜切分 + 生成插画提示词的手动流程见 [使用指南.md](使用指南.md)；`shots.json` 和分镜提示词就位后，可手动生成分镜图片：
 
 ```bash
 python scripts/generate_images.py --dir "文案分镜库/你的项目目录"
 ```
 
-### 4. 拼接成片
-
-需要本机安装 `ffmpeg` 并加入 PATH：
+再拼接成片（需要本机安装 `ffmpeg` 并加入 PATH）：
 
 ```bash
 python scripts/compose_video.py --dir "文案分镜库/你的项目目录"
@@ -110,7 +117,7 @@ python scripts/compose_video.py --dir "文案分镜库/你的项目目录"
 
 `<项目目录>` 下需要有 `shots.json`（分镜时间数据）和 `images/`（对应分镜插画，文件名如 `shot-0001.png`）。输出默认为 `<项目目录>/output.mp4`。
 
-### 5. 启动分镜管理系统（可选）
+### 4. 启动分镜管理系统（可选）
 
 ```bash
 cd web
