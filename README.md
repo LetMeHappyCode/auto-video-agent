@@ -1,11 +1,19 @@
 # auto-video-agent
 
-把一段 SRT 字幕文案，自动流水线化生成成套「分镜插画提示词 → AI 生图 → 拼接成片」的视频，基于 Claude Code 的 Agent / Skill / Workflow 编排。
+把一段 SRT 字幕文案，自动流水线化生成成套「分镜插画提示词 → AI 生图 → 拼接成片」的视频，基于 Agent / Skill / Workflow 编排。
 
-<p align="center">
-  <img src="示例/图片/分镜管理系统页面.jpg" width="45%" />
-  <img src="示例/图片/分镜管理系统页面2.jpg" width="45%" />
-</p>
+## 兼用进度
+
+项目内的 Agent/Skill/Workflow 目前按 Claude Code 的约定格式编写。以下是在不同 Coding Harness 下的兼用情况：
+
+| Coding Harness | 状态 |
+| --- | --- |
+| Claude Code | ✅ 已验证可用 |
+| DeepSeek Harness | ⬜ 未测试 |
+| Codex | ⬜ 未测试 |
+| Gemini CLI | ⬜ 未测试 |
+
+理论上其他支持类似 Agent/Skill/Workflow 编排能力的 Harness 也可以直接复用或少量适配后使用，欢迎反馈实际兼用结果。
 
 ## 效果预览
 
@@ -23,7 +31,25 @@ https://github.com/user-attachments/assets/88b1fbad-e34c-461d-b6bd-26dd3a6c8073
 4. **拼接成片**：按分镜时间轴把所有插画拼接成一段无声视频
 5. **可视化管理**：提供一个本地 Web 管理界面，浏览分镜库、预览/生成图片、编辑分镜数据
 
-整条链路由 Claude Code 的 Agent（`.claude/agents/`）+ Skill（`.claude/skills/`）+ Workflow（`.claude/workflows/`）编排完成，AI 生成的正文内容全部由子智能体自己落盘，主会话只传递状态和路径，避免上下文被大量正文占满。
+整条链路由 Agent（`.claude/agents/`）+ Skill（`.claude/skills/`）+ Workflow（`.claude/workflows/`）编排完成，AI 生成的正文内容全部由子智能体自己落盘，主会话只传递状态和路径，避免上下文被大量正文占满。
+
+## 工作流程
+
+```mermaid
+flowchart TD
+    A[SRT 字幕文件] --> B["srt-shot-segmenter agent<br/>一次性分镜切分"]
+    B --> C[shots.json<br/>镜头时间轴 + 台词]
+    C --> D["generate-illustration-prompts workflow<br/>逐镜头并发生成提示词"]
+    D --> E["prompt-generator agent<br/>五步法生成 + 十项自检"]
+    E --> F["prompt-result-verifier agent<br/>批量校验结果文件"]
+    F --> G[shot-NNNN.prompt.json]
+    G --> H["generate_images.py<br/>调用 Seedream 文生图/图生图"]
+    H --> I[shot-NNNN.png 分镜插画]
+    I --> J["compose_video.py<br/>按时间轴拼接"]
+    J --> K[output.mp4 成片]
+    C -.编辑/预览.-> L[分镜管理系统 Web UI]
+    I -.浏览/生成.-> L
+```
 
 ## 目录结构
 
@@ -94,9 +120,14 @@ python app.py
 
 访问 http://localhost:5000，可以浏览分镜库、预览/一键生成分镜图片、编辑分镜提示词与 `shots.json`。
 
+<p align="center">
+  <img src="示例/图片/分镜管理系统页面.jpg" width="45%" />
+  <img src="示例/图片/分镜管理系统页面2.jpg" width="45%" />
+</p>
+
 ## 技术栈
 
-- Claude Code Agent / Skill / Workflow（分镜切分、提示词生成、批量校验的核心编排）
+- Claude Code Agent / Skill / Workflow（分镜切分、提示词生成、批量校验的核心编排，兼用进度见上文）
 - Python（Flask 后端、图像生成与视频拼接脚本）
 - 火山方舟 Seedream 文生图/图生图 API
 - ffmpeg（视频拼接）
