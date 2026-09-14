@@ -1,4 +1,4 @@
-# claudeTextToPrompt
+# auto-video-agent
 
 把一段 SRT 字幕文案，自动流水线化生成成套「分镜插画提示词 → AI 生图 → 拼接成片」的视频，基于 Claude Code 的 Agent / Skill / Workflow 编排。
 
@@ -9,7 +9,9 @@
 
 ## 效果预览
 
-📹 [示例成片视频](示例/9月14日.mp4)（GitHub 页面内不支持直接播放，点击后下载或在本地查看）
+
+https://github.com/user-attachments/assets/88b1fbad-e34c-461d-b6bd-26dd3a6c8073
+
 
 ## 这是什么
 
