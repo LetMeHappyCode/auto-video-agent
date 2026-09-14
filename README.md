@@ -17,6 +17,7 @@
 
 ## 效果预览
 
+https://github.com/user-attachments/assets/f6d6576f-8c11-4dfe-b1ec-59370cc17bea
 
 https://github.com/user-attachments/assets/88b1fbad-e34c-461d-b6bd-26dd3a6c8073
 
