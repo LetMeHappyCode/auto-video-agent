@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分镜管理系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 16px;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            color: #1976d2;
+            border-bottom-color: #1976d2;
+        }
+
+        .tab:hover {
+            color: #1976d2;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .project-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .project-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .project-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .project-name {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+
+        .project-info {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-right: 5px;
+            margin-top: 5px;
+        }
+
+        .badge.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .badge.warning {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .shots-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .shot-card {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: stretch;
+        }
+
+        .shot-thumb-col {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .shot-header {
+            padding: 8px 10px;
+            background: #f5f5f5;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .shot-id {
+            font-weight: 600;
+            color: #1976d2;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        .shot-image {
+            width: 90px;
+            aspect-ratio: 9/16;
+            object-fit: cover;
+            background: #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 12px;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+
+        .shot-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .shot-content {
+            padding: 12px 15px;
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .shot-text {
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 6px;
+            line-height: 1.5;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .shot-prompt {
+            font-size: 12px;
+            color: #999;
+            line-height: 1.4;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .shot-actions {
+            padding: 12px 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            border-left: 1px solid #e0e0e0;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .shot-actions button {
+            white-space: nowrap;
+        }
+
+        /* 大图预览模态框 */
+        .preview-modal .modal-content {
+            padding: 10px;
+            max-width: 90vw;
+            max-height: 90vh;
+            background: transparent;
+            box-shadow: none;
+        }
+
+        .preview-modal img {
+            max-width: 100%;
+            max-height: 85vh;
+            display: block;
+            margin: 0 auto;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .btn-primary {
+            background: #1976d2;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1565c0;
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #666;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-success {
+            background: #4caf50;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #45a049;
+        }
+
+        .btn-small {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+
+        .back-button {
+            margin-bottom: 20px;
+        }
+
+        .editor-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .json-editor {
+            width: 100%;
+            min-height: 500px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            resize: vertical;
+        }
+
+        .editor-actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .form-group textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+        }
+
+        .form-group input[type="checkbox"] {
+            margin-right: 8px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .status-message {
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .status-message.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            display: block;
+        }
+
+        .status-message.error {
+            background: #ffebee;
+            color: #c62828;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>分镜管理系统</h1>
+        </header>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('shots-manager')">分镜提示词管理</button>
+            <button class="tab" onclick="switchTab('json-editor')">shots.json 编辑</button>
+        </div>
+
+        <!-- 分镜提示词管理 -->
+        <div id="shots-manager" class="tab-content active">
+            <div id="project-list-view">
+                <div class="project-list" id="projectList"></div>
+            </div>
+
+            <div id="shots-view" style="display: none;">
+                <button class="btn-secondary back-button" onclick="backToProjects()">← 返回项目列表</button>
+                <h2 id="currentProjectName" style="margin-bottom: 20px;"></h2>
+
+                <div class="editor-container" style="margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 10px;">主角参考图</h3>
+                    <p style="color: #666; font-size: 14px; margin-bottom: 15px;">
+                        上传后会自动重命名为 reference.&lt;扩展名&gt;，保存在项目目录下，生成含主角的分镜图片时自动读取。
+                    </p>
+                    <div id="referenceImagePreview" style="margin-bottom: 15px;"></div>
+                    <input type="file" id="referenceImageInput" accept=".png,.jpg,.jpeg,.webp" style="display: none;" onchange="uploadReferenceImage()">
+                    <button class="btn-primary" onclick="document.getElementById('referenceImageInput').click()">上传 / 替换参考图</button>
+                    <button class="btn-secondary" id="deleteRefBtn" style="display: none;" onclick="deleteReferenceImage()">删除参考图</button>
+                </div>
+
+                <div class="shots-list" id="shotsList"></div>
+            </div>
+        </div>
+
+        <!-- shots.json 编辑器 -->
+        <div id="json-editor" class="tab-content">
+            <div id="json-project-list-view">
+                <div class="project-list" id="jsonProjectList"></div>
+            </div>
+
+            <div id="json-editor-view" style="display: none;">
+                <div class="editor-container">
+                    <button class="btn-secondary back-button" onclick="backToJsonProjects()">← 返回项目列表</button>
+                    <h2 id="jsonProjectName" style="margin-bottom: 20px;"></h2>
+                    <div id="statusMessage" class="status-message"></div>
+                    <textarea class="json-editor" id="jsonContent" placeholder="加载中..."></textarea>
+                    <div class="editor-actions">
+                        <button class="btn-success" onclick="saveJson()">保存</button>
+                        <button class="btn-secondary" onclick="reloadJson()">重新加载</button>
+                        <button class="btn-secondary" onclick="formatJson()">格式化</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 图片大图预览模态框 -->
+    <div id="previewModal" class="modal preview-modal" onclick="closePreviewModal(event)">
+        <div class="modal-content">
+            <img id="previewModalImg" src="" alt="预览">
+        </div>
+    </div>
+
+    <!-- 编辑 Prompt 模态框 -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">编辑分镜提示词</div>
+            <div id="editStatusMessage" class="status-message"></div>
+            <div class="form-group">
+                <label>当前目标片段</label>
+                <div id="editShotText" style="color: #666; margin-bottom: 10px;"></div>
+            </div>
+            <div class="form-group">
+                <label>提示词</label>
+                <textarea id="editPrompt"></textarea>
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="editHasProtagonist">
+                    包含主角特征
+                </label>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-primary" onclick="saveEdit()">保存</button>
+                <button class="btn-secondary" onclick="closeEditModal()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+        let currentProject = null;
+        let currentEditShot = null;
+        let currentJsonProject = null;
+
+        // 切换标签页
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+
+            if (tabId === 'shots-manager') {
+                loadProjects();
+            } else if (tabId === 'json-editor') {
+                loadJsonProjects();
+            }
+        }
+
+        // 加载项目列表
+        async function loadProjects() {
+            try {
+                const response = await fetch(`${API_BASE}/projects`);
+                const projects = await response.json();
+
+                const container = document.getElementById('projectList');
+                container.innerHTML = projects.map(p => `
+                    <div class="project-card" onclick="viewProject('${p.name}')">
+                        <div class="project-name">${p.name}</div>
+                        <div class="project-info">
+                            <span class="badge ${p.has_shots_dir ? 'success' : 'warning'}">
+                                ${p.shot_count} 个分镜
+                            </span>
+                            ${p.has_shots_json ? '<span class="badge success">shots.json</span>' : ''}
+                            ${p.has_reference_image ? '<span class="badge success">已有参考图</span>' : ''}
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('加载项目失败:', error);
+            }
+        }
+
+        // 查看项目的分镜
+        async function viewProject(projectName) {
+            currentProject = projectName;
+            document.getElementById('project-list-view').style.display = 'none';
+            document.getElementById('shots-view').style.display = 'block';
+            document.getElementById('currentProjectName').textContent = projectName;
+
+            await loadReferenceImage(projectName);
+
+            try {
+                const response = await fetch(`${API_BASE}/projects/${encodeURIComponent(projectName)}/shots`);
+                const shots = await response.json();
+
+                const container = document.getElementById('shotsList');
+                container.innerHTML = shots.map(shot => {
+                    const imgUrl = `${API_BASE}/projects/${encodeURIComponent(projectName)}/shots/${shot.shot_id}/image`;
+                    return `
+                    <div class="shot-card">
+                        <div class="shot-thumb-col">
+                            <div class="shot-header">
+                                <span class="shot-id">#${String(shot.shot_id).padStart(4, '0')}</span>
+                                ${shot.has_protagonist ? '<span class="badge success btn-small">主角</span>' : '<span class="badge warning btn-small">无</span>'}
+                            </div>
+                            <div class="shot-image" ${shot.has_image ? `onclick="openPreviewModal('${imgUrl}')"` : ''}>
+                                ${shot.has_image
+                                    ? `<img src="${imgUrl}" alt="Shot ${shot.shot_id}">`
+                                    : '未生成'
+                                }
+                            </div>
+                        </div>
+                        <div class="shot-content">
+                            <div class="shot-text">${shot.text}</div>
+                            <div class="shot-prompt">${shot.prompt}</div>
+                        </div>
+                        <div class="shot-actions">
+                            ${!shot.has_image
+                                ? `<button class="btn-primary btn-small" onclick="generateImage('${projectName}', ${shot.shot_id})">生成图片</button>`
+                                : `<button class="btn-secondary btn-small" onclick="generateImage('${projectName}', ${shot.shot_id})">重新生成</button>`
+                            }
+                            <button class="btn-secondary btn-small" onclick="openEditModal(${shot.shot_id}, '${shot.text}', \`${shot.prompt.replace(/`/g, '\\`')}\`, ${shot.has_protagonist})">编辑</button>
+                        </div>
+                    </div>
+                `}).join('');
+            } catch (error) {
+                console.error('加载分镜失败:', error);
+            }
+        }
+
+        // 返回项目列表
+        function backToProjects() {
+            document.getElementById('shots-view').style.display = 'none';
+            document.getElementById('project-list-view').style.display = 'block';
+            currentProject = null;
+        }
+
+        // 加载参考图预览
+        async function loadReferenceImage(projectName) {
+            const preview = document.getElementById('referenceImagePreview');
+            const deleteBtn = document.getElementById('deleteRefBtn');
+
+            try {
+                const response = await fetch(`${API_BASE}/projects/${encodeURIComponent(projectName)}/reference-image`);
+
+                if (response.ok) {
+                    const url = `${API_BASE}/projects/${encodeURIComponent(projectName)}/reference-image?t=${Date.now()}`;
+                    preview.innerHTML = `<img src="${url}" style="max-width: 200px; max-height: 280px; border-radius: 4px; border: 1px solid #e0e0e0;">`;
+                    deleteBtn.style.display = 'inline-block';
+                } else {
+                    preview.innerHTML = '<div style="color: #999;">尚未上传参考图</div>';
+                    deleteBtn.style.display = 'none';
+                }
+            } catch (error) {
+                preview.innerHTML = '<div style="color: #999;">尚未上传参考图</div>';
+                deleteBtn.style.display = 'none';
+            }
+        }
+
+        // 上传参考图
+        async function uploadReferenceImage() {
+            const input = document.getElementById('referenceImageInput');
+            const file = input.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(`${API_BASE}/projects/${encodeURIComponent(currentProject)}/reference-image`, {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    await loadReferenceImage(currentProject);
+                } else {
+                    alert('上传失败：' + (result.error || '未知错误'));
+                }
+            } catch (error) {
+                alert('上传失败：' + error.message);
+            } finally {
+                input.value = '';
+            }
+        }
+
+        // 删除参考图
+        async function deleteReferenceImage() {
+            if (!confirm('确定删除当前参考图吗？')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/projects/${encodeURIComponent(currentProject)}/reference-image`, {
+                    method: 'DELETE',
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    await loadReferenceImage(currentProject);
+                } else {
+                    alert('删除失败：' + (result.error || '未知错误'));
+                }
+            } catch (error) {
+                alert('删除失败：' + error.message);
+            }
+        }
+
+        // 生成图片
+        async function generateImage(projectName, shotId) {
+            const button = event.target;
+            button.disabled = true;
+            button.textContent = '生成中...';
+
+            try {
+                const response = await fetch(`${API_BASE}/projects/${encodeURIComponent(projectName)}/shots/${shotId}/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('生成成功！');
+                    viewProject(projectName);
+                } else {
+                    alert('生成失败：' + (result.error || '未知错误'));
+                    button.disabled = false;
+                    button.textContent = '生成图片';
+                }
+            } catch (error) {
+                alert('生成失败：' + error.message);
+                button.disabled = false;
+                button.textContent = '生成图片';
+            }
+        }
+
+        // 打开图片大图预览
+        function openPreviewModal(url) {
+            document.getElementById('previewModalImg').src = url;
+            document.getElementById('previewModal').classList.add('active');
+        }
+
+        // 关闭图片大图预览（点击遮罩层关闭，点击图片本身不关闭）
+        function closePreviewModal(event) {
+            if (event.target.id === 'previewModal') {
+                document.getElementById('previewModal').classList.remove('active');
+            }
+        }
+
+        // 打开编辑模态框
+        function openEditModal(shotId, text, prompt, hasProtagonist) {
+            currentEditShot = shotId;
+            document.getElementById('editShotText').textContent = text;
+            document.getElementById('editPrompt').value = prompt;
+            document.getElementById('editHasProtagonist').checked = hasProtagonist;
+            document.getElementById('editModal').classList.add('active');
+            document.getElementById('editStatusMessage').className = 'status-message';
+        }
+
+        // 关闭编辑模态框
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('active');
+            currentEditShot = null;
+        }
+
+        // 保存编辑
+        async function saveEdit() {
+            const prompt = document.getElementById('editPrompt').value;
+            const hasProtagonist = document.getElementById('editHasProtagonist').checked;
+
+            try {
+                const response = await fetch(`${API_BASE}/projects/${encodeURIComponent(currentProject)}/shots/${currentEditShot}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt, has_protagonist: hasProtagonist })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const statusMsg = document.getElementById('editStatusMessage');
+                    statusMsg.className = 'status-message success';
+                    statusMsg.textContent = '保存成功！';
+                    setTimeout(() => {
+                        closeEditModal();
+                        viewProject(currentProject);
+                    }, 1000);
+                } else {
+                    const statusMsg = document.getElementById('editStatusMessage');
+                    statusMsg.className = 'status-message error';
+                    statusMsg.textContent = '保存失败：' + (result.error || '未知错误');
+                }
+            } catch (error) {
+                const statusMsg = document.getElementById('editStatusMessage');
+                statusMsg.className = 'status-message error';
+                statusMsg.textContent = '保存失败：' + error.message;
+            }
+        }
+
+        // JSON 编辑器功能
+        async function loadJsonProjects() {
+            try {
+                const response = await fetch(`${API_BASE}/projects`);
+                const projects = await response.json();
+
+                const container = document.getElementById('jsonProjectList');
+                container.innerHTML = projects.filter(p => p.has_shots_json).map(p => `
+                    <div class="project-card" onclick="editJson('${p.name}')">
+                        <div class="project-name">${p.name}</div>
+                        <div class="project-info">
+                            <span class="badge success">shots.json</span>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('加载项目失败:', error);
+            }
+        }
+
+        async function editJson(projectName) {
+            currentJsonProject = projectName;
+            document.getElementById('json-project-list-view').style.display = 'none';
+            document.getElementById('json-editor-view').style.display = 'block';
+            document.getElementById('jsonProjectName').textContent = projectName;
+
+            await reloadJson();
+        }
+
+        function backToJsonProjects() {
+            document.getElementById('json-editor-view').style.display = 'none';
+            document.getElementById('json-project-list-view').style.display = 'block';
+            currentJsonProject = null;
+        }
+
+        async function reloadJson() {
+            try {
+                const response = await fetch(`${API_BASE}/projects/${encodeURIComponent(currentJsonProject)}/shots.json`);
+                const data = await response.json();
+                document.getElementById('jsonContent').value = JSON.stringify(data, null, 2);
+                document.getElementById('statusMessage').className = 'status-message';
+            } catch (error) {
+                const statusMsg = document.getElementById('statusMessage');
+                statusMsg.className = 'status-message error';
+                statusMsg.textContent = '加载失败：' + error.message;
+            }
+        }
+
+        function formatJson() {
+            try {
+                const content = document.getElementById('jsonContent').value;
+                const parsed = JSON.parse(content);
+                document.getElementById('jsonContent').value = JSON.stringify(parsed, null, 2);
+                const statusMsg = document.getElementById('statusMessage');
+                statusMsg.className = 'status-message success';
+                statusMsg.textContent = '格式化成功';
+                setTimeout(() => statusMsg.className = 'status-message', 2000);
+            } catch (error) {
+                const statusMsg = document.getElementById('statusMessage');
+                statusMsg.className = 'status-message error';
+                statusMsg.textContent = '格式化失败：JSON 格式错误';
+            }
+        }
+
+        async function saveJson() {
+            try {
+                const content = document.getElementById('jsonContent').value;
+                const parsed = JSON.parse(content);
+
+                const response = await fetch(`${API_BASE}/projects/${encodeURIComponent(currentJsonProject)}/shots.json`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(parsed)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const statusMsg = document.getElementById('statusMessage');
+                    statusMsg.className = 'status-message success';
+                    statusMsg.textContent = '保存成功！';
+                    setTimeout(() => statusMsg.className = 'status-message', 3000);
+                } else {
+                    const statusMsg = document.getElementById('statusMessage');
+                    statusMsg.className = 'status-message error';
+                    statusMsg.textContent = '保存失败：' + (result.error || '未知错误');
+                }
+            } catch (error) {
+                const statusMsg = document.getElementById('statusMessage');
+                statusMsg.className = 'status-message error';
+                statusMsg.textContent = '保存失败：' + error.message;
+            }
+        }
+
+        // 初始化
+        loadProjects();
+    </script>
+</body>
+</html>

@@ -3,8 +3,17 @@ plugins/*/logs/
 __pycache__/
 *.pyc
 
+# 根目录环境变量
+.env
+
+# 虚拟环境
+.venv/
+
 # Local config
 .claude/settings.local.json
 .claude/settings.json
 .codex/
 .agents/
+
+# 无用文档
+无用文档/

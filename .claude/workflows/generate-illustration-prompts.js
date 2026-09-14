@@ -2,12 +2,35 @@ export const meta = {
   name: 'generate-illustration-prompts',
   description: '为每个镜头生成插画提示词并落盘，只向主智能体返回完成状态',
   phases: [
+    { title: 'Load', detail: '读取 shots.json 并解析出 shots 数组' },
     { title: 'Generate', detail: '逐镜头生成插画提示词并由 agent 自行落盘' },
     { title: 'Verify', detail: '批量校验磁盘上的结果文件' },
   ],
 }
 
 // ============ Schema ============
+
+// Load 阶段：只提取 shots.json 里下游需要的字段，不校验切分逻辑本身
+const LOAD_SCHEMA = {
+  type: 'object',
+  properties: {
+    source_srt: { type: 'string' },
+    shots: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'number' },
+          start: { type: 'string' },
+          end: { type: 'string' },
+          text: { type: 'string' }
+        },
+        required: ['id', 'start', 'end', 'text']
+      }
+    }
+  },
+  required: ['source_srt', 'shots']
+}
 
 // prompt-generator 现在只回传极小状态对象，正文由它自己写入 result_path
 const STATUS_SCHEMA = {
@@ -19,6 +42,17 @@ const STATUS_SCHEMA = {
     error: { type: 'string' }
   },
   required: ['shot_id', 'status', 'result_path']
+}
+
+// 确保 output_dir 存在：由一次确定性调用完成，不依赖每个并发的 prompt-generator 各自判断
+const DIR_SCHEMA = {
+  type: 'object',
+  properties: {
+    ready: { type: 'boolean' },
+    path: { type: 'string' },
+    error: { type: 'string' }
+  },
+  required: ['ready', 'path']
 }
 
 const VERIFY_SCHEMA = {
@@ -43,16 +77,47 @@ const VERIFY_SCHEMA = {
 
 // ============ 输入 ============
 
-const shots = args.shots
+const shotsPath = args.shots_path
 const style = args.style
 const protagonist = args.protagonist
-const sourceSrt = args.source_srt
 const outputDir = args.output_dir
 
-log('输入：' + shots.length + ' 个 shot')
+log('shots 文件：' + shotsPath)
 log('画风：' + style)
 log('主角：' + protagonist)
 log('输出目录：' + outputDir)
+
+// ============ Phase 0: 读取 shots.json（workflow 脚本本身无文件系统权限，交给 agent 读）============
+
+phase('Load')
+
+const loadPrompt = '用文件读取工具打开以下绝对路径，这是一份 srt-shot-segmenter 落盘的 JSON 文件（结构为 {source_srt, total_cues, total_shots, shots: [{id, start, end, text, source_srt_ids}, ...]}）。读取后原样提取 source_srt 字段，以及 shots 数组中每个元素的 id/start/end/text 四个字段（丢弃 source_srt_ids，下游不需要），按结构化输出返回，不得省略任何一个 shot，不得改写 text 内容。\n\n文件路径：\n' + shotsPath
+
+const loaded = await agent(loadPrompt, {
+  schema: LOAD_SCHEMA,
+  phase: 'Load',
+  label: 'Load shots.json'
+})
+
+if (!loaded || !loaded.shots || loaded.shots.length === 0) {
+  return {
+    source_srt: '',
+    style: style,
+    protagonist: protagonist,
+    output_dir: outputDir,
+    total_shots: 0,
+    completed: 0,
+    failed: 0,
+    succeeded_shots: [],
+    failed_shots: [],
+    error: 'shots.json 读取失败或为空：' + shotsPath
+  }
+}
+
+const shots = loaded.shots
+const sourceSrt = loaded.source_srt
+
+log('读取完成：' + shots.length + ' 个 shot')
 
 // 构建完整文本（用于提供上下文）
 let fullScript = ''
@@ -64,6 +129,31 @@ for (let i = 0; i < shots.length; i++) {
 function resultPathFor(shotId) {
   const padded = String(shotId).padStart(4, '0')
   return outputDir + '/shot-' + padded + '.prompt.json'
+}
+
+// ============ 确保 output_dir 存在（一次性、确定性，不依赖每个并发 agent 各自判断）============
+
+const dirPrompt = '用 Bash 执行 mkdir -p 创建以下目录（已存在也直接视为成功，不算错误）：\n\n' + outputDir + '\n\n创建或确认存在后，只返回结构化结果，不得输出其他内容。'
+
+const dirResult = await agent(dirPrompt, {
+  schema: DIR_SCHEMA,
+  phase: 'Generate',
+  label: 'Ensure output_dir'
+})
+
+if (!dirResult || !dirResult.ready) {
+  return {
+    source_srt: sourceSrt,
+    style: style,
+    protagonist: protagonist,
+    output_dir: outputDir,
+    total_shots: shots.length,
+    completed: 0,
+    failed: shots.length,
+    succeeded_shots: [],
+    failed_shots: [],
+    error: 'output_dir 创建失败：' + (dirResult ? dirResult.error : 'agent returned null')
+  }
 }
 
 // ============ Phase 1: 生成（agent 自行落盘，只回传状态）============

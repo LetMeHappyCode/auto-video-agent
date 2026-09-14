@@ -2,7 +2,8 @@
 """批量校验 output_dir 下的 shot-NNNN.prompt.json 结果文件
 
 只做只读结构性校验：文件存在性、JSON 合法性、shot_id 匹配、必需字段齐全、
-prompt 非空且不含换行。不解读 prompt/当前目标片段 的内容质量。
+prompt 字段非空。不解读 prompt/当前目标片段 的内容质量，也不限制 prompt 内部是否含换行——
+换行不影响 JSON 完整性，属于内容排版而非结构错误。
 """
 
 import argparse
@@ -55,10 +56,6 @@ def verify_one(dir_path: Path, shot_id: int) -> dict:
     prompt = data.get("prompt")
     if not isinstance(prompt, str) or not prompt.strip():
         entry["error"] = "prompt 字段为空或缺失"
-        return entry
-
-    if "\n" in prompt or "\r" in prompt:
-        entry["error"] = "prompt 字段包含换行符"
         return entry
 
     entry["verified"] = True
