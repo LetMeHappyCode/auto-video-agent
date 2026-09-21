@@ -89,6 +89,8 @@ ARK_API_KEY=你的火山方舟 API Key
 
 ### 2. 让 AI 自主完成分镜切分 → 提示词生成 → 生图 → 拼接成片
 
+> **注意**：本项目的编排依赖 Claude Code 的 Workflow（多 Agent 编排）能力，默认未开启。运行前请先在 Claude Code 里发送包含 `ultracode` 关键词的消息，或在会话设置中开启 Workflow，否则 `generate-illustration-prompts` 等 workflow 无法被调用。
+
 正常用法是在 Claude Code 对话里直接说明需求，例如：
 
 ```
