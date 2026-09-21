@@ -1,0 +1,12 @@
+{
+  "source_srt": "寿命倒计时者的一生.srt",
+  "total_cues": 225,
+  "segments": [
+    { "segment_id": 1, "cue_start": 1, "cue_end": 48 },
+    { "segment_id": 2, "cue_start": 49, "cue_end": 90 },
+    { "segment_id": 3, "cue_start": 91, "cue_end": 135 },
+    { "segment_id": 4, "cue_start": 136, "cue_end": 166 },
+    { "segment_id": 5, "cue_start": 167, "cue_end": 204 },
+    { "segment_id": 6, "cue_start": 205, "cue_end": 225 }
+  ]
+}
